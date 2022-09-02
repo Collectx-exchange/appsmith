@@ -1,3 +1,16 @@
+FROM node:16-buster as build-client
+
+RUN yarn global add @craco/craco
+
+COPY ./ ./
+
+RUN echo 'export const VERSION = "v1.7.14"' > ./app/rts/src/version.js
+RUN cd ./app/rts && ./build.sh
+
+RUN cd ./app/client && yarn install && REACT_APP_VERSION_ID=v1.7.14 REACT_APP_VERSION_RELEASE_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ') ./build.sh
+
+FROM appsmith/appsmith-server:v1.7.14 as server
+
 FROM ubuntu:20.04
 
 LABEL maintainer="tech@appsmith.com"
@@ -44,23 +57,23 @@ VOLUME [ "/appsmith-stacks" ]
 
 # ------------------------------------------------------------------------
 # Add backend server - Application Layer
-ARG JAR_FILE=./app/server/dist/server-*.jar
-ARG PLUGIN_JARS=./app/server/dist/plugins/*.jar
+ARG JAR_FILE=/server.jar
+ARG PLUGIN_JARS=/plugins/*.jar
 ARG APPSMITH_SEGMENT_CE_KEY
 ENV APPSMITH_SEGMENT_CE_KEY=${APPSMITH_SEGMENT_CE_KEY}
 #Create the plugins directory
 RUN mkdir -p ./backend ./editor ./rts ./backend/plugins ./templates ./utils
 
 #Add the jar to the container
-COPY ${JAR_FILE} backend/server.jar
-COPY ${PLUGIN_JARS} backend/plugins/
+COPY --from=server ${JAR_FILE} backend/server.jar
+COPY --from=server ${PLUGIN_JARS} backend/plugins/
 
 # Add client UI - Application Layer
-COPY ./app/client/build editor/
+COPY --from=build-client ./app/client/build editor/
 
 # Add RTS - Application Layer
-COPY ./app/rts/package.json ./app/rts/dist rts/
-COPY ./app/rts/node_modules rts/node_modules
+COPY --from=build-client ./app/rts/package.json ./app/rts/dist rts/
+COPY --from=build-client ./app/rts/node_modules rts/node_modules
 
 # Nginx & MongoDB config template - Configuration layer
 COPY ./deploy/docker/templates/nginx/* \
