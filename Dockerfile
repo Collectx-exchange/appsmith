@@ -10,7 +10,7 @@ RUN cd ./app/rts && ./build.sh
 RUN cd ./app/client && yarn install && REACT_APP_VERSION_ID=v1.7.14 REACT_APP_VERSION_RELEASE_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ') \
   REACT_APP_CLIENT_LOG_LEVEL=ERROR EXTEND_ESLINT=true craco --max-old-space-size=4096 build --config craco.build.config.js
 
-FROM public.ecr.aws/docker/library/appsmith/appsmith-server:v1.7.14 as server
+FROM 346284258841.dkr.ecr.us-east-1.amazonaws.com/appsmith-server:v1.7.14 as server
 
 FROM public.ecr.aws/docker/library/ubuntu:20.04
 
