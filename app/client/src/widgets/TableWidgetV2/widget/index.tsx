@@ -15,7 +15,11 @@ import _, {
 } from "lodash";
 
 import BaseWidget, { WidgetState } from "widgets/BaseWidget";
-import { RenderModes, WidgetType } from "constants/WidgetConstants";
+import {
+  RenderModes,
+  WidgetType,
+  WIDGET_PADDING,
+} from "constants/WidgetConstants";
 import { EventType } from "constants/AppsmithActionConstants/ActionConstants";
 import Skeleton from "components/utils/Skeleton";
 import { noop, retryPromise } from "utils/AppsmithUtils";
@@ -72,6 +76,7 @@ import { IconButtonCell } from "../component/cellComponents/IconButtonCell";
 import { EditActionCell } from "../component/cellComponents/EditActionsCell";
 import { klona as clone } from "klona";
 import { CheckboxCell } from "../component/cellComponents/CheckboxCell";
+import { SwitchCell } from "../component/cellComponents/SwitchCell";
 
 const ReactTableComponent = lazy(() =>
   retryPromise(() => import("../component")),
@@ -157,7 +162,7 @@ class TableWidgetV2 extends BaseWidget<TableWidgetProps, WidgetState> {
     let columns: ReactTableColumnProps[] = [];
     const hiddenColumns: ReactTableColumnProps[] = [];
 
-    const { componentWidth } = this.getComponentDimensions();
+    const { componentWidth } = this.getPaddingAdjustedDimensions();
     let totalColumnWidth = 0;
 
     if (isArray(orderedTableColumns)) {
@@ -207,19 +212,45 @@ class TableWidgetV2 extends BaseWidget<TableWidgetProps, WidgetState> {
       });
     }
 
+    const lastColumnIndex = columns.length - 1;
     if (totalColumnWidth < componentWidth) {
-      const lastColumnIndex = columns.length - 1;
-
+      /*
+        This "if" block is responsible for upsizing the last column width
+        if there is space left in the table container towards the right
+      */
       if (columns[lastColumnIndex]) {
         const lastColumnWidth =
           columns[lastColumnIndex].width || DEFAULT_COLUMN_WIDTH;
         const remainingWidth = componentWidth - totalColumnWidth;
-
+        // Adding the remaining width i.e. space left towards the right, to the last column width
+        columns[lastColumnIndex].width = lastColumnWidth + remainingWidth;
+      }
+    } else if (totalColumnWidth > componentWidth) {
+      /*
+        This "else-if" block is responsible for downsizing the last column width
+        if the last column spills over resulting in horizontal scroll
+      */
+      const extraWidth = totalColumnWidth - componentWidth;
+      const lastColWidth =
+        columns[lastColumnIndex].width || DEFAULT_COLUMN_WIDTH;
+      /*
+        Below if condition explanation:
+        Condition 1: (lastColWidth > COLUMN_MIN_WIDTH)
+          We will downsize the last column only if its greater than COLUMN_MIN_WIDTH
+        Condition 2: (extraWidth < lastColWidth)
+          This condition checks whether the last column is the only column that is spilling over.
+          If more than one columns are spilling over we won't downsize the last column
+      */
+      if (lastColWidth > COLUMN_MIN_WIDTH && extraWidth < lastColWidth) {
+        const availableWidthForLastColumn = lastColWidth - extraWidth;
+        /*
+          Below we are making sure last column width doesn't go lower than COLUMN_MIN_WIDTH again
+          as availableWidthForLastColumn might go lower than COLUMN_MIN_WIDTH in some cases
+        */
         columns[lastColumnIndex].width =
-          lastColumnWidth +
-          (remainingWidth < DEFAULT_COLUMN_WIDTH
-            ? DEFAULT_COLUMN_WIDTH
-            : remainingWidth);
+          availableWidthForLastColumn < COLUMN_MIN_WIDTH
+            ? COLUMN_MIN_WIDTH
+            : availableWidthForLastColumn;
       }
     }
 
@@ -321,7 +352,7 @@ class TableWidgetV2 extends BaseWidget<TableWidgetProps, WidgetState> {
         /*
          * Inject the edited cell value from the editableCell object
          */
-        if (this.props.editableCell.index === rowIndex) {
+        if (this.props.editableCell?.index === rowIndex) {
           const { column, inputValue } = this.props.editableCell;
 
           newRow[column] = inputValue;
@@ -761,6 +792,14 @@ class TableWidgetV2 extends BaseWidget<TableWidgetProps, WidgetState> {
     this.disableDrag(disable);
   };
 
+  getPaddingAdjustedDimensions = () => {
+    // eslint-disable-next-line prefer-const
+    let { componentHeight, componentWidth } = this.getComponentDimensions();
+    // (2 * WIDGET_PADDING) gives the total horizontal padding (i.e. paddingLeft + paddingRight)
+    componentWidth = componentWidth - 2 * WIDGET_PADDING;
+    return { componentHeight, componentWidth };
+  };
+
   getPageView() {
     const {
       totalRecordsCount,
@@ -780,7 +819,10 @@ class TableWidgetV2 extends BaseWidget<TableWidgetProps, WidgetState> {
       isVisiblePagination ||
       isVisibleSearch;
 
-    const { componentHeight, componentWidth } = this.getComponentDimensions();
+    const {
+      componentHeight,
+      componentWidth,
+    } = this.getPaddingAdjustedDimensions();
 
     return (
       <Suspense fallback={<Skeleton />}>
@@ -1232,9 +1274,10 @@ class TableWidgetV2 extends BaseWidget<TableWidgetProps, WidgetState> {
 
     const isColumnEditable =
       column.isEditable && isColumnTypeEditable(column.columnType);
+    const alias = props.cell.column.columnProperties.alias;
     const isCellEditMode =
-      props.cell.column.alias === this.props.editableCell.column &&
-      rowIndex === this.props.editableCell.index;
+      props.cell.column.alias === this.props.editableCell?.column &&
+      rowIndex === this.props.editableCell?.index;
 
     switch (column.columnType) {
       case ColumnTypes.BUTTON:
@@ -1528,7 +1571,6 @@ class TableWidgetV2 extends BaseWidget<TableWidgetProps, WidgetState> {
         );
 
       case ColumnTypes.CHECKBOX:
-        const alias = props.cell.column.columnProperties.alias;
         return (
           <CheckboxCell
             accentColor={this.props.accentColor}
@@ -1538,6 +1580,50 @@ class TableWidgetV2 extends BaseWidget<TableWidgetProps, WidgetState> {
             cellBackground={cellProperties.cellBackground}
             compactMode={compactMode}
             disabledCheckbox={
+              this.props.inlineEditingSaveOption ===
+                InlineEditingSaveOptions.ROW_LEVEL &&
+              this.props.updatedRowIndices.length &&
+              this.props.updatedRowIndices.indexOf(originalIndex) === -1
+            }
+            hasUnSavedChanges={cellProperties.hasUnsavedChanged}
+            horizontalAlignment={cellProperties.horizontalAlignment}
+            isCellEditable={
+              (isColumnEditable && cellProperties.isCellEditable) ?? false
+            }
+            isCellVisible={cellProperties.isCellVisible ?? true}
+            isHidden={isHidden}
+            onChange={() => {
+              const row = filteredTableData[rowIndex];
+              const cellValue = !props.cell.value;
+
+              this.updateTransientTableData({
+                __original_index__: originalIndex,
+                [alias]: cellValue,
+              });
+
+              this.onColumnEvent({
+                rowIndex,
+                action: column.onCheckChange,
+                triggerPropertyName: "onCheckChange",
+                eventType: EventType.ON_CHECK_CHANGE,
+                row: {
+                  ...row,
+                  [alias]: cellValue,
+                },
+              });
+            }}
+            value={props.cell.value}
+            verticalAlignment={cellProperties.verticalAlignment}
+          />
+        );
+
+      case ColumnTypes.SWITCH:
+        return (
+          <SwitchCell
+            accentColor={this.props.accentColor}
+            cellBackground={cellProperties.cellBackground}
+            compactMode={compactMode}
+            disabledSwitch={
               this.props.inlineEditingSaveOption ===
                 InlineEditingSaveOptions.ROW_LEVEL &&
               this.props.updatedRowIndices.length &&
@@ -1588,8 +1674,8 @@ class TableWidgetV2 extends BaseWidget<TableWidgetProps, WidgetState> {
         if (isCellEditMode) {
           validationErrorMessage =
             column.validation.isColumnEditableCellRequired &&
-            (isNil(this.props.editableCell.inputValue) ||
-              this.props.editableCell.inputValue === "")
+            (isNil(this.props.editableCell?.inputValue) ||
+              this.props.editableCell?.inputValue === "")
               ? "This field is required"
               : column.validation?.errorMessage;
         }
@@ -1640,9 +1726,10 @@ class TableWidgetV2 extends BaseWidget<TableWidgetProps, WidgetState> {
       value: value,
       inputValue,
     });
+
     this.props.updateWidgetMetaProperty("columnEditableCellValue", {
       ...this.props.columnEditableCellValue,
-      [this.props.editableCell.column]: value,
+      [this.props.editableCell?.column || ""]: value,
     });
   };
 
@@ -1688,11 +1775,11 @@ class TableWidgetV2 extends BaseWidget<TableWidgetProps, WidgetState> {
       if (
         this.props.isEditableCellValid &&
         action === EditableCellActions.SAVE &&
-        value !== this.props.editableCell.initialValue
+        value !== this.props.editableCell?.initialValue
       ) {
         this.updateTransientTableData({
           __original_index__: this.getRowOriginalIndex(rowIndex),
-          [alias]: this.props.editableCell.value,
+          [alias]: this.props.editableCell?.value,
         });
 
         if (onSubmit) {
@@ -1703,7 +1790,8 @@ class TableWidgetV2 extends BaseWidget<TableWidgetProps, WidgetState> {
             eventType: EventType.ON_SUBMIT,
             row: {
               ...this.props.filteredTableData[rowIndex],
-              [this.props.editableCell.column]: this.props.editableCell.value,
+              [this.props.editableCell?.column || ""]: this.props.editableCell
+                ?.value,
             },
           });
         }
@@ -1711,7 +1799,7 @@ class TableWidgetV2 extends BaseWidget<TableWidgetProps, WidgetState> {
         this.clearEditableCell();
       } else if (
         action === EditableCellActions.DISCARD ||
-        value === this.props.editableCell.initialValue
+        value === this.props.editableCell?.initialValue
       ) {
         this.clearEditableCell();
       }
@@ -1737,8 +1825,8 @@ class TableWidgetV2 extends BaseWidget<TableWidgetProps, WidgetState> {
 
   isColumnCellEditable = (column: ColumnProperties, rowIndex: number) => {
     return (
-      column.alias === this.props.editableCell.column &&
-      rowIndex === this.props.editableCell.index
+      column.alias === this.props.editableCell?.column &&
+      rowIndex === this.props.editableCell?.index
     );
   };
 }

@@ -427,6 +427,7 @@ const EdtiableColumnTypes: string[] = [
   ColumnTypes.NUMBER,
   ColumnTypes.SELECT,
   ColumnTypes.CHECKBOX,
+  ColumnTypes.SWITCH,
 ];
 
 export function isColumnTypeEditable(columnType: string) {
@@ -598,7 +599,10 @@ export const createEditActionColumn = (props: TableWidgetProps) => {
   return [
     {
       propertyPath: `primaryColumns.${column.id}`,
-      propertyValue: column,
+      propertyValue: {
+        ...column,
+        ...editActionDynamicProperties,
+      },
     },
     {
       propertyPath: `columnOrder`,
