@@ -61,7 +61,7 @@ import ManageUsers from "pages/workspace/ManageUsers";
 import { ScrollIndicator } from "design-system";
 import UserApi from "@appsmith/api/UserApi";
 import { Colors } from "constants/Colors";
-import { fetchWorkspace } from "actions/workspaceActions";
+import { fetchWorkspace } from "@appsmith/actions/workspaceActions";
 import { useHistory } from "react-router-dom";
 import { Tooltip } from "@blueprintjs/core";
 import { isEllipsisActive } from "utils/helpers";
@@ -376,7 +376,7 @@ function WorkspaceInviteUsersForm(props: any) {
       : props.roles.map((role: any) => {
           return {
             id: role.id,
-            value: role.name,
+            value: role.name?.split(" - ")[0],
             label: role.description,
           };
         });
@@ -565,7 +565,7 @@ function WorkspaceInviteUsersForm(props: any) {
                           </UserInfo>
                           <UserRole>
                             <Text type={TextType.P1}>
-                              {user.permissionGroupName}
+                              {user.permissionGroupName?.split(" - ")[0]}
                             </Text>
                           </UserRole>
                         </User>

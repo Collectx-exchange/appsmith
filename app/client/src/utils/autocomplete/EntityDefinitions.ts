@@ -155,6 +155,9 @@ export const entityDefinitions = {
     updatedRowIndices: generateTypeDef(widget.updatedRowIndices),
     triggeredRowIndex: generateTypeDef(widget.triggeredRowIndex),
     pageOffset: generateTypeDef(widget.pageOffset),
+    tableHeaders: generateTypeDef(widget.tableHeaders),
+    newRow: generateTypeDef(widget.newRow),
+    isAddRowInProgress: "bool",
   }),
   VIDEO_WIDGET: {
     "!doc":
@@ -328,7 +331,6 @@ export const entityDefinitions = {
   },
   MODAL_WIDGET: {
     isVisible: isVisible,
-    isOpen: "bool",
   },
   RICH_TEXT_EDITOR_WIDGET: {
     isVisible: isVisible,
@@ -558,6 +560,11 @@ export const entityDefinitions = {
     text: {
       "!type": "string",
       "!doc": "The text value of the input",
+      "!url": "https://docs.appsmith.com/widget-reference/input",
+    },
+    inputText: {
+      "!type": "string",
+      "!doc": "The unformatted text value of the input",
       "!url": "https://docs.appsmith.com/widget-reference/input",
     },
     isValid: "bool",

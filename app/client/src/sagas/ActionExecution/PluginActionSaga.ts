@@ -107,7 +107,7 @@ import { CURL_IMPORT_FORM } from "@appsmith/constants/forms";
 import { submitCurlImportForm } from "actions/importActions";
 import { curlImportFormValues } from "pages/Editor/APIEditor/helpers";
 import { matchBasePath } from "pages/Editor/Explorer/helpers";
-import { isTrueObject, findDatatype } from "workers/evaluationUtils";
+import { isTrueObject, findDatatype } from "workers/Evaluation/evaluationUtils";
 import { handleExecuteJSFunctionSaga } from "sagas/JSPaneSagas";
 import { Plugin } from "api/PluginApi";
 import { setDefaultActionDisplayFormat } from "./PluginActionSagaUtils";
@@ -384,28 +384,32 @@ export default function* executePluginActionTriggerSaga(
   const { isError, payload } = executePluginActionResponse;
 
   if (isError) {
-    AppsmithConsole.addError({
-      id: actionId,
-      logType: LOG_TYPE.ACTION_EXECUTION_ERROR,
-      text: `Execution failed with status ${payload.statusCode}`,
-      source: {
-        type: ENTITY_TYPE.ACTION,
-        name: action.name,
-        id: actionId,
-      },
-      state: payload.request,
-      messages: [
-        {
-          // Need to stringify cause this gets rendered directly
-          // and rendering objects can crash the app
-          message: !isString(payload.body)
-            ? JSON.stringify(payload.body)
-            : payload.body,
-          type: PLATFORM_ERROR.PLUGIN_EXECUTION,
-          subType: payload.errorType,
+    AppsmithConsole.addErrors([
+      {
+        payload: {
+          id: actionId,
+          logType: LOG_TYPE.ACTION_EXECUTION_ERROR,
+          text: `Execution failed with status ${payload.statusCode}`,
+          source: {
+            type: ENTITY_TYPE.ACTION,
+            name: action.name,
+            id: actionId,
+          },
+          state: payload.request,
+          messages: [
+            {
+              // Need to stringify cause this gets rendered directly
+              // and rendering objects can crash the app
+              message: !isString(payload.body)
+                ? JSON.stringify(payload.body)
+                : payload.body,
+              type: PLATFORM_ERROR.PLUGIN_EXECUTION,
+              subType: payload.errorType,
+            },
+          ],
         },
-      ],
-    });
+      },
+    ]);
     if (onError) {
       yield call(executeAppAction, {
         event: { type: eventType },
@@ -627,20 +631,24 @@ function* runActionSaga(
       });
     }
 
-    AppsmithConsole.addError({
-      id: actionId,
-      logType: LOG_TYPE.ACTION_EXECUTION_ERROR,
-      text: `Execution failed${
-        payload.statusCode ? ` with status ${payload.statusCode}` : ""
-      }`,
-      source: {
-        type: ENTITY_TYPE.ACTION,
-        name: actionObject.name,
-        id: actionId,
+    AppsmithConsole.addErrors([
+      {
+        payload: {
+          id: actionId,
+          logType: LOG_TYPE.ACTION_EXECUTION_ERROR,
+          text: `Execution failed${
+            payload.statusCode ? ` with status ${payload.statusCode}` : ""
+          }`,
+          source: {
+            type: ENTITY_TYPE.ACTION,
+            name: actionObject.name,
+            id: actionId,
+          },
+          messages: appsmithConsoleErrorMessageList,
+          state: payload.request,
+        },
       },
-      messages: appsmithConsoleErrorMessageList,
-      state: payload.request,
-    });
+    ]);
 
     Toaster.show({
       text: createMessage(ERROR_ACTION_EXECUTE_FAIL, actionObject.name),
@@ -782,24 +790,28 @@ function* executePageLoadAction(pageAction: PageAction) {
     }
 
     if (isError) {
-      AppsmithConsole.addError({
-        id: pageAction.id,
-        logType: LOG_TYPE.ACTION_EXECUTION_ERROR,
-        text: `Execution failed with status ${payload.statusCode}`,
-        source: {
-          type: ENTITY_TYPE.ACTION,
-          name: pageAction.name,
-          id: pageAction.id,
-        },
-        state: payload.request,
-        messages: [
-          {
-            message: error,
-            type: PLATFORM_ERROR.PLUGIN_EXECUTION,
-            subType: payload.errorType,
+      AppsmithConsole.addErrors([
+        {
+          payload: {
+            id: pageAction.id,
+            logType: LOG_TYPE.ACTION_EXECUTION_ERROR,
+            text: `Execution failed with status ${payload.statusCode}`,
+            source: {
+              type: ENTITY_TYPE.ACTION,
+              name: pageAction.name,
+              id: pageAction.id,
+            },
+            state: payload.request,
+            messages: [
+              {
+                message: error,
+                type: PLATFORM_ERROR.PLUGIN_EXECUTION,
+                subType: payload.errorType,
+              },
+            ],
           },
-        ],
-      });
+        },
+      ]);
 
       yield put(
         executePluginActionError({

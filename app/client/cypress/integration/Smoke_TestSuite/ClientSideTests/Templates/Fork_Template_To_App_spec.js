@@ -1,9 +1,21 @@
 import widgetLocators from "../../../../locators/Widgets.json";
 import template from "../../../../locators/TemplatesLocators.json";
 const publish = require("../../../../locators/publishWidgetspage.json");
+import { ObjectsRegistry } from "../../../../support/Objects/Registry";
+
+let agHelper = ObjectsRegistry.AggregateHelper;
 
 describe("Fork a template to the current app", () => {
+  afterEach(() => {
+    agHelper.SaveLocalStorageCache();
+  });
+
+  beforeEach(() => {
+    agHelper.RestoreLocalStorageCache();
+  });
+
   it("1. Fork a template to the current app", () => {
+    cy.wait(5000);
     cy.get(template.startFromTemplateCard).click();
     cy.wait("@fetchTemplate").should(
       "have.nested.property",
