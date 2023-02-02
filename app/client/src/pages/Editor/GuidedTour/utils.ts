@@ -10,7 +10,7 @@ import {
 // data-guided-tour-iid - iid(indicator id) used for the lottie animation show near an element
 
 class IndicatorHelper {
-  timerId!: number;
+  timerId!: ReturnType<typeof setTimeout>;
   indicatorWrapper!: HTMLDivElement;
   animationItem!: AnimationItem;
   indicatorHeightOffset: number;
@@ -190,6 +190,15 @@ export function highlightSection(
   // or dimension changes
   function updatePosition(element: Element) {
     const coordinates = getCoordinates(element);
+
+    // If the element is not visible fade off the border
+    if (!document.body.contains(element)) {
+      highlightBorder.classList.remove(
+        GuidedTourClasses.GUIDED_TOUR_SHOW_BORDER,
+      );
+      return;
+    }
+
     highlightBorder.style.left = coordinates.left - positionOffset + "px";
     highlightBorder.style.left = coordinates.left - positionOffset + "px";
     highlightBorder.style.top = coordinates.top - positionOffset + "px";

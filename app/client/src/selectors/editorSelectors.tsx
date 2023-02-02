@@ -35,6 +35,7 @@ import {
   createCanvasWidget,
   createLoadingWidget,
 } from "utils/widgetRenderUtils";
+import { checkIsDropTarget } from "components/designSystems/appsmith/PositionedContainer";
 import WidgetFactory, {
   NonSerialisableWidgetConfigs,
 } from "utils/WidgetFactory";
@@ -49,6 +50,9 @@ const getIsResizing = (state: AppState) => state.ui.widgetDragResize.isResizing;
 export const getWidgetConfigs = (state: AppState) =>
   state.entities.widgetConfig;
 const getPageListState = (state: AppState) => state.entities.pageList;
+
+export const selectForceOpenWidgetPanel = (state: AppState) =>
+  state.ui.onBoarding.forceOpenWidgetPanel;
 
 export const getProviderCategories = (state: AppState) =>
   state.ui.providers.providerCategories;
@@ -151,6 +155,12 @@ export const selectCurrentPageSlug = createSelector(
     pages.find((page) => page.pageId === pageId)?.slug || PLACEHOLDER_PAGE_SLUG,
 );
 
+export const getCurrentPageDescription = createSelector(
+  getCurrentPageId,
+  getPageList,
+  (pageId, pages) => pages.find((page) => page.pageId === pageId)?.description,
+);
+
 export const selectPageSlugToIdMap = createSelector(getPageList, (pages) =>
   pages.reduce((acc, page: Page) => {
     // Comeback
@@ -163,8 +173,8 @@ export const getCurrentApplication = (state: AppState) =>
   state.ui.applications.currentApplication;
 
 export const getCurrentApplicationId = (state: AppState) =>
-  state.entities.pageList.applicationId ||
-  ""; /** this is set during init can assume it to be defined */
+  state.entities.pageList.applicationId || "";
+/** this is set during init can assume it to be defined */
 
 export const selectCurrentApplicationSlug = (state: AppState) =>
   state.ui.applications.currentApplication?.slug || PLACEHOLDER_APP_SLUG;
@@ -222,6 +232,7 @@ export const getCurrentApplicationLayout = (state: AppState) =>
   state.ui.applications.currentApplication?.appLayout;
 
 export const getCanvasWidth = (state: AppState) => state.ui.mainCanvas.width;
+export const getCanvasScale = (state: AppState) => state.ui.mainCanvas.scale;
 
 export const getMainCanvasProps = (state: AppState) => state.ui.mainCanvas;
 
@@ -286,10 +297,31 @@ export const getWidgetCards = createSelector(
         displayName,
         icon: iconSVG,
         searchTags,
+        isDynamicHeight: isAutoHeightEnabledForWidget(config as WidgetProps),
       };
     });
     const sortedCards = sortBy(_cards, ["displayName"]);
     return sortedCards;
+  },
+);
+
+export const getCommonWidgets = createSelector(
+  getWidgetCards,
+  (widgetCards) => {
+    const commonWidgetTypes = [
+      "TEXT_WIDGET",
+      "TABLE_WIDGET_V2",
+      "BUTTON_WIDGET",
+      "INPUT_WIDGET_V2",
+      "CONTAINER_WIDGET",
+    ];
+
+    return widgetCards
+      .filter((widget) => commonWidgetTypes.includes(widget.type))
+      .sort(
+        (a, b) =>
+          commonWidgetTypes.indexOf(a.type) - commonWidgetTypes.indexOf(b.type),
+      );
   },
 );
 
@@ -407,6 +439,7 @@ const getWidgetSpacesForContainer = (
       bottom: widget.bottomRow,
       right: widget.rightColumn,
       type: widget.type,
+      isDropTarget: checkIsDropTarget(widget.type),
       fixedHeight,
     };
     return occupiedSpace;
@@ -423,9 +456,9 @@ const getWidgetSpacesForContainer = (
 const generateOccupiedSpacesMap = (
   widgets: CanvasWidgetsReduxState,
   fetchNow = true,
-): { [containerWidgetId: string]: OccupiedSpace[] } | undefined => {
+): { [containerWidgetId: string]: WidgetSpace[] } | undefined => {
   const occupiedSpaces: {
-    [containerWidgetId: string]: OccupiedSpace[];
+    [containerWidgetId: string]: WidgetSpace[];
   } = {};
   if (!fetchNow) return;
   // Get all widgets with type "CONTAINER_WIDGET" and has children
@@ -446,7 +479,7 @@ const generateOccupiedSpacesMap = (
       );
       // Get the occupied spaces in this container
       // Assign it to the containerWidgetId key in occupiedSpaces
-      occupiedSpaces[containerWidgetId] = getOccupiedSpacesForContainer(
+      occupiedSpaces[containerWidgetId] = getWidgetSpacesForContainer(
         containerWidgetId,
         childWidgets.map((widgetId) => widgets[widgetId]),
       );
@@ -702,6 +735,7 @@ export function getContainerWidgetSpacesSelectorWhileMoving(
     },
   );
 }
+
 export const getActionById = createSelector(
   [getActions, (state: any, props: any) => props.match.params.apiId],
   (actions, id) => {

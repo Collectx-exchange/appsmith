@@ -11,8 +11,8 @@ import { createSelector } from "reselect";
 import { selectFeatureFlags } from "selectors/usersSelectors";
 import FeatureFlags from "entities/FeatureFlags";
 
-export const getFocusableCodeEditorField = (state: AppState) =>
-  state.ui.editorContext.focusableCodeEditor;
+export const getFocusableInputField = (state: AppState) =>
+  state.ui.editorContext.focusedInputField;
 
 export const getCodeEditorHistory = (state: AppState) =>
   state.ui.editorContext.codeEditorHistory;
@@ -34,9 +34,6 @@ export const getAllEntityCollapsibleStates = (state: AppState) =>
 
 export const getAllSubEntityCollapsibleStates = (state: AppState) =>
   state.ui.editorContext.subEntityCollapsibleFields;
-
-export const getExplorerSwitchIndex = (state: AppState) =>
-  state.ui.editorContext.explorerSwitchIndex;
 
 export const getPanelPropertyContext = createSelector(
   getPropertyPanelState,
@@ -67,9 +64,9 @@ export const getSelectedPropertyTabIndex = createSelector(
   },
 );
 
-export const getIsCodeEditorFocused = createSelector(
+export const getIsInputFieldFocused = createSelector(
   [
-    getFocusableCodeEditorField,
+    getFocusableInputField,
     selectFeatureFlags,
     (_state: AppState, key: string | undefined) => key,
   ],
@@ -78,10 +75,7 @@ export const getIsCodeEditorFocused = createSelector(
     featureFlags: FeatureFlags,
     key: string | undefined,
   ): boolean => {
-    if (featureFlags.CONTEXT_SWITCHING) {
-      return !!(key && focusableField === key);
-    }
-    return false;
+    return !!(key && focusableField === key);
   },
 );
 

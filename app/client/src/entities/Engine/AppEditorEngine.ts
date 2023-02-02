@@ -47,6 +47,9 @@ import AppEngine, {
   PluginFormConfigsNotFoundError,
   PluginsNotFoundError,
 } from ".";
+import { fetchJSLibraries } from "actions/JSLibraryActions";
+import CodemirrorTernService from "utils/autocomplete/CodemirrorTernService";
+import { waitForSegmentInit } from "ce/sagas/userSagas";
 
 export default class AppEditorEngine extends AppEngine {
   constructor(mode: APP_MODE) {
@@ -71,6 +74,7 @@ export default class AppEditorEngine extends AppEngine {
   public *setupEngine(payload: AppEnginePayload): any {
     yield* super.setupEngine.call(this, payload);
     yield put(resetEditorSuccess());
+    CodemirrorTernService.resetServer();
   }
 
   public startPerformanceTracking() {
@@ -113,6 +117,9 @@ export default class AppEditorEngine extends AppEngine {
       ReduxActionErrorTypes.FETCH_PAGE_ERROR,
     ];
 
+    initActionsCalls.push(fetchJSLibraries(applicationId));
+    successActionEffects.push(ReduxActionTypes.FETCH_JS_LIBRARIES_SUCCESS);
+
     const allActionCalls: boolean = yield call(
       failFastApiCalls,
       initActionsCalls,
@@ -124,6 +131,8 @@ export default class AppEditorEngine extends AppEngine {
       throw new ActionsNotFoundError(
         `Unable to fetch actions for the application: ${applicationId}`,
       );
+
+    yield call(waitForSegmentInit, true);
     yield put(fetchAllPageEntityCompletion([executePageLoadActions()]));
   }
 
