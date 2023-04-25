@@ -4,13 +4,13 @@ RUN yarn global add @craco/craco
 
 COPY ./ ./
 
-RUN echo 'export const VERSION = "v1.9.7"' > ./app/rts/src/version.js
+RUN echo 'export const VERSION = "v1.9.16"' > ./app/rts/src/version.js
 RUN cd ./app/rts && ./build.sh
 
-RUN cd ./app/client && yarn install && REACT_APP_VERSION_ID=v1.9.7 REACT_APP_VERSION_RELEASE_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ') \
+RUN cd ./app/client && yarn install && REACT_APP_VERSION_ID=v1.9.16 REACT_APP_VERSION_RELEASE_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ') \
   REACT_APP_CLIENT_LOG_LEVEL=ERROR EXTEND_ESLINT=true craco --max-old-space-size=4096 build --config craco.build.config.js
 
-FROM 810773643803.dkr.ecr.us-east-1.amazonaws.com/appsmith-server:v1.9.7 as server
+FROM 810773643803.dkr.ecr.us-east-1.amazonaws.com/appsmith-server:v1.9.16 as server
 
 FROM public.ecr.aws/docker/library/ubuntu:20.04
 
