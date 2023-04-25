@@ -9,10 +9,10 @@ import {
   TooltipComponent,
 } from "design-system-old";
 
-import { AppState } from "@appsmith/reducers";
+import type { AppState } from "@appsmith/reducers";
 import { APP_MODE } from "entities/App";
 
-import { getAppMode } from "selectors/applicationSelectors";
+import { getAppMode } from "@appsmith/selectors/applicationSelectors";
 import { setPreviewModeInitAction } from "actions/editorActions";
 import { previewModeSelector } from "selectors/editorSelectors";
 
@@ -29,6 +29,7 @@ const StyledButton = styled(Button)<{ active: boolean }>`
   `}
   padding: 0 ${(props) => props.theme.spaces[2]}px;
   color: ${Colors.GREY_900};
+  height: ${(props) => props.theme.smallHeaderHeight};
 
   svg {
     height: 18px;
@@ -72,7 +73,7 @@ function ToggleModeButton() {
         icon={"play-circle-line"}
         iconPosition={IconPositions.left}
         onClick={onClickPreviewModeButton}
-        size={Size.large}
+        size={Size.medium}
         tag={"button"}
         text={createMessage(EDITOR_HEADER.previewTooltip.text).toUpperCase()}
       />

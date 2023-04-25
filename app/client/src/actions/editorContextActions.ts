@@ -1,11 +1,11 @@
 import { ReduxActionTypes } from "@appsmith/constants/ReduxActionConstants";
-import {
+import type {
   CodeEditorContext,
   CursorPosition,
-  CursorPositionOrigin,
   EvaluatedPopupState,
   PropertyPanelContext,
 } from "reducers/uiReducers/editorContextReducer";
+import { CursorPositionOrigin } from "reducers/uiReducers/editorContextReducer";
 
 export const setFocusableInputField = (path: string | undefined) => {
   return {
@@ -85,13 +85,6 @@ export const setSelectedPropertyTabIndex = (
   };
 };
 
-export const setCanvasDebuggerSelectedTab = (selectedTab: string) => {
-  return {
-    type: ReduxActionTypes.SET_CANVAS_DEBUGGER_SELECTED_TAB,
-    payload: selectedTab,
-  };
-};
-
 export const setPanelSelectedPropertyTabIndex = (
   index: number,
   panelPropertyPath: string,
@@ -157,6 +150,13 @@ export const setAllSubEntityCollapsibleStates = (payload: {
 }) => {
   return {
     type: ReduxActionTypes.SET_ALL_SUB_ENTITY_COLLAPSIBLE_STATE,
+    payload,
+  };
+};
+
+export const setExplorerSwitchIndex = (payload: number) => {
+  return {
+    type: ReduxActionTypes.SET_EXPLORER_SWITCH_INDEX,
     payload,
   };
 };

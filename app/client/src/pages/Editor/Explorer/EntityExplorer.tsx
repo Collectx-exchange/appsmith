@@ -1,10 +1,5 @@
-import React, {
-  useRef,
-  MutableRefObject,
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import type { MutableRefObject } from "react";
+import React, { useRef, useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
 import Divider from "components/editorComponents/Divider";
 import Search from "./ExplorerSearch";
@@ -32,11 +27,6 @@ import { SEARCH_ENTITY } from "constants/Explorer";
 import { getCurrentPageId } from "selectors/editorSelectors";
 import { fetchWorkspace } from "@appsmith/actions/workspaceActions";
 import { getCurrentWorkspaceId } from "@appsmith/selectors/workspaceSelectors";
-import {
-  getExplorerActive,
-  getExplorerPinned,
-} from "selectors/explorerSelector";
-import { setExplorerActiveAction } from "actions/explorerActions";
 
 const Wrapper = styled.div`
   height: 100%;
@@ -82,9 +72,8 @@ const StyledDivider = styled(Divider)`
 function EntityExplorer({ isActive }: { isActive: boolean }) {
   const dispatch = useDispatch();
   const [searchKeyword, setSearchKeyword] = useState("");
-  const searchInputRef: MutableRefObject<HTMLInputElement | null> = useRef(
-    null,
-  );
+  const searchInputRef: MutableRefObject<HTMLInputElement | null> =
+    useRef(null);
   PerformanceTracker.startTracking(PerformanceTransactionName.ENTITY_EXPLORER);
   useEffect(() => {
     PerformanceTracker.stopTracking();
@@ -95,18 +84,13 @@ function EntityExplorer({ isActive }: { isActive: boolean }) {
   );
   const noResults = false;
   const pageId = useSelector(getCurrentPageId);
-  const pinned = useSelector(getExplorerPinned);
-  const active = useSelector(getExplorerActive);
   const showWidgetsSidebar = useCallback(() => {
     history.push(builderURL({ pageId }));
-    if (!pinned && active) {
-      dispatch(setExplorerActiveAction(false));
-    }
     dispatch(forceOpenWidgetPanel(true));
     if (isFirstTimeUserOnboardingEnabled) {
       dispatch(toggleInOnboardingWidgetSelection(true));
     }
-  }, [isFirstTimeUserOnboardingEnabled, pageId, pinned, active]);
+  }, [isFirstTimeUserOnboardingEnabled, pageId]);
 
   const currentWorkspaceId = useSelector(getCurrentWorkspaceId);
 

@@ -1,4 +1,5 @@
-import lottie, { AnimationItem } from "lottie-web";
+import type { AnimationItem } from "lottie-web";
+import lottie from "lottie-web";
 import indicator from "assets/lottie/guided-tour-indicator.json";
 import { Classes as GuidedTourClasses } from "pages/Editor/GuidedTour/constants";
 import {
@@ -190,15 +191,6 @@ export function highlightSection(
   // or dimension changes
   function updatePosition(element: Element) {
     const coordinates = getCoordinates(element);
-
-    // If the element is not visible fade off the border
-    if (!document.body.contains(element)) {
-      highlightBorder.classList.remove(
-        GuidedTourClasses.GUIDED_TOUR_SHOW_BORDER,
-      );
-      return;
-    }
-
     highlightBorder.style.left = coordinates.left - positionOffset + "px";
     highlightBorder.style.left = coordinates.left - positionOffset + "px";
     highlightBorder.style.top = coordinates.top - positionOffset + "px";

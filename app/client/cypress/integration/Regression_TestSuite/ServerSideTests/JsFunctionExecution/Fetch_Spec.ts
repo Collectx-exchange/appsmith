@@ -4,10 +4,9 @@ const agHelper = ObjectsRegistry.AggregateHelper;
 const explorerHelper = ObjectsRegistry.EntityExplorer;
 const propertyPaneHelper = ObjectsRegistry.PropertyPane;
 const aggregateHelper = ObjectsRegistry.AggregateHelper;
-const canvasHelper = ObjectsRegistry.CanvasHelper;
 
 describe("Tests fetch calls", () => {
-  it("1. Ensures that cookies are not passed with fetch calls", function() {
+  it("1. Ensures that cookies are not passed with fetch calls", function () {
     jsEditor.CreateJSObject(
       `export default {
         myVar1: [],
@@ -40,7 +39,7 @@ describe("Tests fetch calls", () => {
     jsEditor.RunJSObj();
     agHelper.AssertContains("anonymousUser", "exist");
   });
-  it("2. Tests if fetch works with setTimeout", function() {
+  it("2. Tests if fetch works with setTimeout", function () {
     jsEditor.CreateJSObject(
       `export default {
               myVar1: [],
@@ -73,8 +72,8 @@ describe("Tests fetch calls", () => {
     agHelper.AssertContains("anonymousUser", "exist");
   });
 
-  it("3. Tests if fetch works with store value", function() {
-    canvasHelper.OpenWidgetPane();
+  it("3. Tests if fetch works with store value", function () {
+    explorerHelper.NavigateToSwitcher("widgets");
     explorerHelper.DragDropWidgetNVerify("buttonwidget", 500, 200);
     explorerHelper.SelectEntityByName("Button1");
     propertyPaneHelper.TypeTextIntoField("Label", "getUserID");

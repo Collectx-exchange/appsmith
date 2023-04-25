@@ -12,11 +12,12 @@ type templateActions =
   | "Delete"
   | "Count"
   | "Distinct"
-  | "Aggregate";
+  | "Aggregate"
+  | "Select"
+  | "Create";
 
 export class EntityExplorer {
   public agHelper = ObjectsRegistry.AggregateHelper;
-  public canvasHelper = ObjectsRegistry.CanvasHelper;
   public locator = ObjectsRegistry.CommonLocators;
   private modifierKey = Cypress.platform === "darwin" ? "meta" : "ctrl";
 
@@ -36,6 +37,10 @@ export class EntityExplorer {
     "//div[text()='" +
     entityNameinLeftSidebar +
     "']/ancestor::div/preceding-sibling::a[contains(@class, 't--entity-collapse-toggle')]";
+  private _expandCollapseSection = (entityNameinLeftSidebar: string) =>
+    this._expandCollapseArrow(entityNameinLeftSidebar) +
+    "/ancestor::div[contains(@class, 't--entity')]//div[@class='bp3-collapse']";
+
   private _templateMenuTrigger = (entityNameinLeftSidebar: string) =>
     "//div[contains(@class, 't--entity-name')][text()='" +
     entityNameinLeftSidebar +
@@ -48,12 +53,11 @@ export class EntityExplorer {
   private getPageLocator = (pageName: string) =>
     `.t--entity-name:contains(${pageName})`;
   private _visibleTextSpan = (spanText: string) =>
-    "//span[text()='" + spanText + " Query']";
+    "//span[text()='" + spanText + "']";
   _createNewPopup = ".bp3-overlay-content";
   _entityExplorerWrapper = ".t--entity-explorer-wrapper";
   _pinEntityExplorer = ".t--pin-entity-explorer";
   _entityExplorer = ".t--entity-explorer";
-  _bindingsClose = ".t--entity-property-close";
   private _modalTextWidget = (modalName: string) =>
     "//div[contains(@class, 't--entity-name')][text()='" +
     modalName +
@@ -65,6 +69,7 @@ export class EntityExplorer {
     section: "Widgets" | "Queries/JS" | "Datasources" | "Pages" | "" = "",
     ctrlKey = false,
   ) {
+    this.NavigateToSwitcher("explorer");
     if (section) this.ExpandCollapseEntity(section); //to expand respective section
     cy.xpath(this._entityNameInExplorer(entityNameinLeftSidebar))
       .last()
@@ -77,6 +82,7 @@ export class EntityExplorer {
     section: "Widgets" | "Queries/JS" | "Datasources" | "" = "",
     ctrlKey = false,
   ) {
+    this.NavigateToSwitcher("explorer");
     if (section) this.ExpandCollapseEntity(section); //to expand respective section
     this.ExpandCollapseEntity(modalNameinEE);
     cy.xpath(this._modalTextWidget(modalNameinEE))
@@ -98,6 +104,10 @@ export class EntityExplorer {
     }
   }
 
+  public NavigateToSwitcher(navigationTab: "explorer" | "widgets") {
+    cy.get(this.locator._openNavigationTab(navigationTab)).click();
+  }
+
   public AssertEntityPresenceInExplorer(entityNameinLeftSidebar: string) {
     cy.xpath(this._entityNameInExplorer(entityNameinLeftSidebar)).should(
       "have.length",
@@ -112,21 +122,52 @@ export class EntityExplorer {
   }
 
   public ExpandCollapseEntity(entityName: string, expand = true, index = 0) {
+    this.agHelper.AssertElementVisible(
+      this._expandCollapseArrow(entityName),
+      index,
+      30000,
+    );
     cy.xpath(this._expandCollapseArrow(entityName))
       .eq(index)
       .invoke("attr", "name")
       .then((arrow) => {
-        if (expand && arrow == "arrow-right")
+        if (expand && arrow == "arrow-right") {
           cy.xpath(this._expandCollapseArrow(entityName))
             .eq(index)
-            .trigger("click", { multiple: true })
-            .wait(1000);
-        else if (!expand && arrow == "arrow-down")
+            .wait(500)
+            .trigger("click", { force: true })
+            .wait(500);
+          // this.agHelper
+          //   .GetElement(this._expandCollapseSection(entityName))
+          //   .then(($div: any) => {
+          //     cy.log("Checking style - expand");
+          //     while (!$div.attr("style").includes("overflow-y: visible;")) {
+          //       cy.log("Inside style check - expand");
+          //       cy.xpath(this._expandCollapseArrow(entityName))
+          //         .eq(index)
+          //         .trigger("click", { multiple: true })
+          //         .wait(500);
+          //     }
+          //   });
+        } else if (!expand && arrow == "arrow-down") {
           cy.xpath(this._expandCollapseArrow(entityName))
             .eq(index)
-            .trigger("click", { multiple: true })
-            .wait(1000);
-        else this.agHelper.Sleep(500);
+            .wait(500)
+            .trigger("click", { force: true })
+            .wait(500);
+          // this.agHelper
+          //   .GetElement(this._expandCollapseSection(entityName))
+          //   .then(($div: any) => {
+          //     cy.log("Checking style - collapse");
+          //     while ($div.attr("style").includes("overflow-y: visible;")) {
+          //       cy.log("Inside style check - collapse");
+          //       cy.xpath(this._expandCollapseArrow(entityName))
+          //         .eq(index)
+          //         .trigger("click", { multiple: true })
+          //         .wait(500);
+          //     }
+          //   });
+        } else this.agHelper.Sleep(500);
       });
   }
 
@@ -166,12 +207,8 @@ export class EntityExplorer {
     this.agHelper.Sleep(500);
   }
 
-  public DragDropWidgetNVerify(
-    widgetType: string,
-    x: number = 200,
-    y: number = 200,
-  ) {
-    this.canvasHelper.OpenWidgetPane();
+  public DragDropWidgetNVerify(widgetType: string, x = 200, y = 200) {
+    this.NavigateToSwitcher("widgets");
     this.agHelper.Sleep();
     cy.get(this.locator._widgetPageIcon(widgetType))
       .first()
@@ -182,32 +219,29 @@ export class EntityExplorer {
       .trigger("mousemove", x, y, { eventConstructor: "MouseEvent" })
       .trigger("mouseup", x, y, { eventConstructor: "MouseEvent" });
     this.agHelper.AssertAutoSave(); //settling time for widget on canvas!
-    cy.get(this.locator._widgetInCanvas(widgetType)).should("exist");
+    if (widgetType === "modalwidget") {
+      cy.get(".t--modal-widget").should("exist");
+    } else {
+      cy.get(this.locator._widgetInCanvas(widgetType)).should("exist");
+    }
   }
 
   public ClonePage(pageName = "Page1") {
-    this.ExpandCollapseEntity("Pages");
-    cy.get(this.getPageLocator(pageName))
-      .trigger("mouseover")
-      .click({ force: true });
-    cy.xpath(this._moreOptionsPopover)
-      .first()
-      .should("be.hidden")
-      .invoke("show")
-      .click({ force: true });
-    cy.get(this._pageClone).click({ force: true });
+    this.SelectEntityByName(pageName, "Pages");
+    this.ActionContextMenuByEntityName(pageName, "Clone");
     this.agHelper.ValidateNetworkStatus("@clonePage", 201);
   }
 
-  public CreateNewDsQuery(dsName: string) {
-    cy.get(this.locator._createNew)
-      .last()
-      .click({ force: true });
-    cy.xpath(this._visibleTextSpan(dsName)).click({ force: true });
+  public CreateNewDsQuery(dsName: string, isQuery = true) {
+    cy.get(this.locator._createNew).last().click({ force: true });
+    let overlayItem = isQuery
+      ? this._visibleTextSpan(dsName + " Query")
+      : this._visibleTextSpan(dsName);
+    this.agHelper.GetNClick(overlayItem);
   }
 
   public CopyPasteWidget(widgetName: string) {
-    this.canvasHelper.OpenWidgetPane();
+    this.NavigateToSwitcher("widgets");
     this.SelectEntityByName(widgetName);
     cy.get("body").type(`{${this.modifierKey}}{c}`);
     cy.get("body").type(`{${this.modifierKey}}{v}`);

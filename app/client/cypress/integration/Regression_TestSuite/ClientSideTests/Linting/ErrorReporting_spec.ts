@@ -13,6 +13,7 @@ describe("Lint error reporting", () => {
   before(() => {
     ee.DragDropWidgetNVerify("tablewidgetv2", 300, 500);
     ee.DragDropWidgetNVerify("buttonwidget", 300, 300);
+    ee.NavigateToSwitcher("explorer");
   });
 
   it("1. Doesn't show lint warnings in debugger but shows on Hover only", () => {
@@ -36,12 +37,14 @@ describe("Lint error reporting", () => {
     });
     MouseHoverNVerify("name", "'name' is defined but never used.", false);
     agHelper.PressEscape();
+    agHelper.GetNClick(debuggerHelper.locators._debuggerIcon);
     agHelper.GetNClick(locator._errorTab);
     debuggerHelper.DebuggerListDoesnotContain(
       "'name' is defined but never used.",
     );
 
     agHelper.RefreshPage();
+    agHelper.GetNClick(debuggerHelper.locators._debuggerIcon);
     agHelper.GetNClick(locator._errorTab);
     debuggerHelper.DebuggerListDoesnotContain(
       "'name' is defined but never used.",
@@ -306,11 +309,7 @@ describe("Lint error reporting", () => {
     const element = isError
       ? cy.get(locator._lintErrorElement)
       : cy.get(locator._lintWarningElement);
-    element
-      .contains(lintOn)
-      .should("exist")
-      .first()
-      .trigger("mouseover");
+    element.contains(lintOn).should("exist").first().trigger("mouseover");
     agHelper.AssertContains(debugMsg);
   }
 

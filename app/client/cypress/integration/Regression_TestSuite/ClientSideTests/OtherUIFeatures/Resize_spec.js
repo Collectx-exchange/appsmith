@@ -1,12 +1,12 @@
 const commonlocators = require("../../../../locators/commonlocators.json");
 const dsl = require("../../../../fixtures/CanvasResizeDsl.json");
 
-describe("Canvas Resize", function() {
+describe("Canvas Resize", function () {
   before(() => {
     cy.addDsl(dsl);
   });
-  it("Deleting bottom widget should resize canvas", function() {
-    const InitHeight = "2960px";
+  it("1. Deleting bottom widget should resize canvas", function () {
+    const InitHeight = "2950px";
     cy.get(commonlocators.dropTarget).should("have.css", "height", InitHeight);
     cy.openPropertyPane("textwidget");
     cy.intercept("PUT", "/api/v1/layouts/*/pages/*").as("deleteUpdate");
@@ -16,7 +16,7 @@ describe("Canvas Resize", function() {
       cy.get(commonlocators.dropTarget).should(
         "have.css",
         "height",
-        `${dsl.minHeight}px`,
+        `${dsl.minHeight - 12}px`, // Reducing 12 px for container padding.
       );
     });
   });

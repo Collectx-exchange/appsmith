@@ -1,8 +1,9 @@
-import React, { forwardRef, RefObject, useEffect, useRef } from "react";
+import type { RefObject } from "react";
+import React, { forwardRef, useEffect, useRef } from "react";
 import styled from "styled-components";
 
-import ResizeObserver from "resize-observer-polyfill";
 import { useSelector } from "react-redux";
+import ResizeObserver from "resize-observer-polyfill";
 import { getCanvasScale } from "selectors/editorSelectors";
 import { isMultiPaneActive } from "selectors/multiPaneSelectors";
 
@@ -90,9 +91,8 @@ export const StickyCanvasArena = forwardRef(
     };
 
     const rescaleSliderCanvas = (entry: IntersectionObserverEntry) => {
-      const canvasCtx: CanvasRenderingContext2D = stickyCanvasRef.current.getContext(
-        "2d",
-      );
+      const canvasCtx: CanvasRenderingContext2D =
+        stickyCanvasRef.current.getContext("2d");
       if (isMultiPane) {
         stickyCanvasRef.current.height =
           entry.intersectionRect.height * canvasScale;
@@ -123,11 +123,15 @@ export const StickyCanvasArena = forwardRef(
     };
     const observeSlider = () => {
       interSectionObserver.current.disconnect();
-      interSectionObserver.current.observe(slidingArenaRef.current);
+      if (slidingArenaRef && slidingArenaRef.current) {
+        interSectionObserver.current.observe(slidingArenaRef.current);
+      }
     };
 
     useEffect(() => {
-      observeSlider();
+      if (slidingArenaRef.current) {
+        observeSlider();
+      }
     }, [
       showCanvas,
       snapRows,
@@ -148,10 +152,11 @@ export const StickyCanvasArena = forwardRef(
       return () => {
         parentCanvas?.removeEventListener("scroll", observeSlider);
         parentCanvas?.removeEventListener("mouseover", observeSlider);
-        resizeObserver.current.unobserve(slidingArenaRef.current);
+        if (slidingArenaRef && slidingArenaRef.current) {
+          resizeObserver.current.unobserve(slidingArenaRef.current);
+        }
       };
     }, []);
-
     return (
       <>
         {/* Canvas will always be sticky to its scrollable parent's view port. i.e,
@@ -162,6 +167,9 @@ export const StickyCanvasArena = forwardRef(
           data-testid={canvasId}
           id={canvasId}
           ref={stickyCanvasRef}
+          style={{
+            position: "absolute",
+          }}
         />
         <StyledCanvasSlider
           data-testid={id}

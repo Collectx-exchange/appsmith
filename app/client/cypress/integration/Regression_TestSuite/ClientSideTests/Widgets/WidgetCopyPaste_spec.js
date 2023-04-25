@@ -3,15 +3,15 @@ const commonLocators = require("../../../../locators/commonlocators.json");
 const explorer = require("../../../../locators/explorerlocators.json");
 const dsl = require("../../../../fixtures/WidgetCopyPaste.json");
 const generatePage = require("../../../../locators/GeneratePage.json");
-import * as _ from "../../../../support/Objects/ObjectsCore";
 
-describe("Widget Copy paste", function() {
+const widgetSelector = (name) => `[data-widgetname-cy="${name}"]`;
+describe("Widget Copy paste", function () {
   const modifierKey = Cypress.platform === "darwin" ? "meta" : "ctrl";
   before(() => {
     cy.addDsl(dsl);
   });
 
-  it("1. When non Layout widget is selected, it should place below the widget selected", function() {
+  it("1. When non Layout widget is selected, it should place below the widget selected", function () {
     // Selection
     cy.get(`#${dsl.dsl.children[1].widgetId}`).click({
       ctrlKey: true,
@@ -42,7 +42,7 @@ describe("Widget Copy paste", function() {
       });
   });
 
-  it("2. When Layout widget is selected, it should place it inside the layout widget", function() {
+  it("2. When Layout widget is selected, it should place it inside the layout widget", function () {
     cy.get(`#div-selection-0`).click({
       force: true,
     });
@@ -61,7 +61,7 @@ describe("Widget Copy paste", function() {
       .should("have.length", 1);
   });
 
-  it("3. When widget inside the layout widget is selected, then it should paste inside the layout widget below the selected widget", function() {
+  it("3. When widget inside the layout widget is selected, then it should paste inside the layout widget below the selected widget", function () {
     cy.get(`#div-selection-0`).click({
       force: true,
     });
@@ -103,13 +103,14 @@ describe("Widget Copy paste", function() {
 
     //paste
     cy.get("body").type(`{${modifierKey}}{v}`);
+    // cy.get(explorer.explorerSwitchId).click();
     // cy.get(explorer.entityModal).click();
     cy.get(".t--modal-widget")
       .find(widgetsPage.chartWidget)
       .should("have.length", 2);
   });
 
-  it("6. Should not be able to paste list widget inside another list widget", function() {
+  it("6. Should be able to paste list widget inside another list widget", function () {
     //clean up
     cy.get(`#div-selection-0`).click({
       force: true,
@@ -118,52 +119,31 @@ describe("Widget Copy paste", function() {
     cy.get("body").type("{del}");
 
     //add list widget
-    _.canvasHelper.OpenWidgetPane();
-    cy.dragAndDropToCanvas("listwidget", { x: 300, y: 700 });
+    cy.get(explorer.widgetSwitchId).click();
+    cy.dragAndDropToCanvas("listwidgetv2", { x: 500, y: 700 });
     cy.get(`div[data-testid='t--selected']`).should("have.length", 1);
 
     //copy
     cy.get("body").type(`{${modifierKey}}{c}`);
 
     //paste
-    cy.get("body").type(`{${modifierKey}}{v}`);
-    cy.get(widgetsPage.listWidget).should("have.length", 2);
-    cy.get(widgetsPage.listWidget)
-      .eq(0)
-      .find(widgetsPage.listWidget)
-      .should("have.length", 0);
+    cy.get(`${widgetSelector("List1")} [type="CONTAINER_WIDGET"]`)
+      .first()
+      .type(`{${modifierKey}}{v}`);
+    cy.get(widgetsPage.listWidgetv2).should("have.length", 4);
+    cy.get(`${widgetSelector("List1")} [type="CONTAINER_WIDGET"]`)
+      .first()
+      .find(widgetsPage.listWidgetv2)
+      .should("have.length", 1);
   });
 
-  it("7. Should not be able to paste list widget inside another list widget, when widget inside the list widget are selected", function() {
-    cy.get(`#div-selection-0`).click({
-      force: true,
-    });
-
-    // Select widget inside the list widget
-    cy.get(widgetsPage.listWidget)
-      .eq(0)
-      .find(".positioned-widget")
-      .eq(0)
-      .click({
-        ctrlKey: true,
-      });
-
-    //paste
-    cy.get("body").type(`{${modifierKey}}{v}`);
-    cy.get(widgetsPage.listWidget).should("have.length", 3);
-    cy.get(widgetsPage.listWidget)
-      .eq(0)
-      .find(widgetsPage.listWidget)
-      .should("have.length", 0);
-  });
-
-  it("8. Should be able to paste widget on the initial generate Page", function() {
+  it("7. Should be able to paste widget on the initial generate Page", function () {
     cy.Createpage("NewPage", false);
 
     //paste
     cy.get("body").type(`{${modifierKey}}{v}`);
 
     //verify a pasted list widget
-    cy.get(widgetsPage.listWidget).should("have.length", 1);
+    cy.get(widgetsPage.listWidgetv2).should("have.length", 1);
   });
 });

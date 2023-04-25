@@ -1,103 +1,48 @@
-import log from "loglevel";
 import * as Sentry from "@sentry/react";
+import log from "loglevel";
+import React from "react";
 import styled from "styled-components";
-import store from "store";
-import { CanvasWidgetStructure } from "widgets/constants";
 import WidgetFactory from "utils/WidgetFactory";
-import React, { memo, useCallback, useEffect } from "react";
+import type { CanvasWidgetStructure } from "widgets/constants";
 
-import CanvasMultiPointerArena, {
-  POINTERS_CANVAS_ID,
-} from "pages/common/CanvasArenas/CanvasMultiPointerArena";
-import { throttle } from "lodash";
 import { RenderModes } from "constants/WidgetConstants";
-import { isMultiplayerEnabledForUser as isMultiplayerEnabledForUserSelector } from "selectors/appCollabSelectors";
-import { useDispatch, useSelector } from "react-redux";
-import { initPageLevelSocketConnection } from "actions/websocketActions";
-import { collabShareUserPointerEvent } from "actions/appCollabActions";
-import { getIsPageLevelSocketConnected } from "selectors/websocketSelectors";
-import { getCurrentGitBranch } from "selectors/gitSyncSelectors";
+import { useSelector } from "react-redux";
 import { getSelectedAppTheme } from "selectors/appThemingSelectors";
-import { getPageLevelSocketRoomId } from "sagas/WebsocketSagas/utils";
 import { previewModeSelector } from "selectors/editorSelectors";
 import useWidgetFocus from "utils/hooks/useWidgetFocus";
+import { getViewportClassName } from "utils/autoLayout/AutoLayoutUtils";
+import { getIsAppSettingsPaneWithNavigationTabOpen } from "selectors/appSettingsPaneSelectors";
 
 interface CanvasProps {
   widgetsStructure: CanvasWidgetStructure;
   pageId: string;
   canvasWidth: number;
-  canvasScale?: number;
+  isAutoLayout?: boolean;
 }
-
-type PointerEventDataType = {
-  data: { x: number; y: number };
-  user: any;
-};
 
 const Container = styled.section<{
   background: string;
+  width: number;
+  $isAutoLayout: boolean;
 }>`
   background: ${({ background }) => background};
-}
+  width: ${({ $isAutoLayout, width }) =>
+    $isAutoLayout ? `100%` : `${width}px`};
 `;
-
-const getPointerData = (
-  e: any,
-  pageId: string,
-  isWebsocketConnected: boolean,
-  currentGitBranch?: string,
-) => {
-  if (store.getState().ui.appCollab.editors.length < 2 || !isWebsocketConnected)
-    return;
-  const selectionCanvas: any = document.getElementById(POINTERS_CANVAS_ID);
-  const rect = selectionCanvas.getBoundingClientRect();
-
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  return {
-    data: { x, y },
-    pageId: getPageLevelSocketRoomId(pageId, currentGitBranch),
-  };
-};
-
-const useShareMousePointerEvent = () => {
-  const dispatch = useDispatch();
-  const isWebsocketConnected = useSelector(getIsPageLevelSocketConnected);
-  useEffect(() => {
-    if (!isWebsocketConnected) {
-      dispatch(initPageLevelSocketConnection());
-    }
-  }, [isWebsocketConnected]);
-
-  return (pointerData: PointerEventDataType) =>
-    dispatch(collabShareUserPointerEvent(pointerData));
-};
-
-// TODO(abhinav): get the render mode from context
-const Canvas = memo((props: CanvasProps) => {
-  const { canvasScale = 1, canvasWidth, pageId } = props;
+const Canvas = (props: CanvasProps) => {
+  const { canvasWidth } = props;
   const isPreviewMode = useSelector(previewModeSelector);
+  const isAppSettingsPaneWithNavigationTabOpen = useSelector(
+    getIsAppSettingsPaneWithNavigationTabOpen,
+  );
   const selectedTheme = useSelector(getSelectedAppTheme);
-
-  const shareMousePointer = useShareMousePointerEvent();
-  const isWebsocketConnected = useSelector(getIsPageLevelSocketConnected);
-  const currentGitBranch = useSelector(getCurrentGitBranch);
-  const isMultiplayerEnabledForUser = useSelector(
-    isMultiplayerEnabledForUserSelector,
-  );
-  const delayedShareMousePointer = useCallback(
-    throttle((data) => shareMousePointer(data), 50, {
-      trailing: false,
-    }),
-    [shareMousePointer, pageId],
-  );
 
   /**
    * background for canvas
    */
   let backgroundForCanvas;
 
-  if (isPreviewMode) {
+  if (isPreviewMode || isAppSettingsPaneWithNavigationTabOpen) {
     backgroundForCanvas = "initial";
   } else {
     backgroundForCanvas = selectedTheme.properties.colors.backgroundColor;
@@ -105,38 +50,26 @@ const Canvas = memo((props: CanvasProps) => {
 
   const focusRef = useWidgetFocus();
 
+  const marginHorizontalClass = props.isAutoLayout ? `mx-0` : `mx-auto`;
+  const paddingBottomClass = props.isAutoLayout ? "" : "pb-52";
   try {
     return (
       <Container
+        $isAutoLayout={!!props.isAutoLayout}
         background={backgroundForCanvas}
-        className="relative mx-auto t--canvas-artboard pb-52"
+        className={`relative t--canvas-artboard ${paddingBottomClass} ${marginHorizontalClass} ${getViewportClassName(
+          canvasWidth,
+        )}`}
         data-testid="t--canvas-artboard"
         id="art-board"
-        onMouseMove={(e) => {
-          if (!isMultiplayerEnabledForUser) return;
-          const data = getPointerData(
-            e,
-            pageId,
-            isWebsocketConnected,
-            currentGitBranch,
-          );
-          !!data && delayedShareMousePointer(data);
-        }}
         ref={focusRef}
-        style={{
-          width: canvasWidth,
-          transform: `scale(${canvasScale})`,
-          transformOrigin: "0 0",
-        }}
+        width={canvasWidth}
       >
         {props.widgetsStructure.widgetId &&
           WidgetFactory.createWidget(
             props.widgetsStructure,
             RenderModes.CANVAS,
           )}
-        {isMultiplayerEnabledForUser && (
-          <CanvasMultiPointerArena pageId={pageId} />
-        )}
       </Container>
     );
   } catch (error) {
@@ -144,8 +77,6 @@ const Canvas = memo((props: CanvasProps) => {
     Sentry.captureException(error);
     return null;
   }
-});
-
-Canvas.displayName = "Canvas";
+};
 
 export default Canvas;
